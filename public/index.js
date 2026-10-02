@@ -22,19 +22,21 @@ roomForm.addEventListener("submit", (event) => {
     }
 
     socket.emit("join-room", roomCode);
+    
+});
+socket.on("room-joined",(roomCode)=>{
     currentRoom=roomCode;
     roomStatus.textContent = `Connected to ${roomCode}`;
     roomStatus.classList.add("is-active");
     messageInput.disabled = false;
     sendBtn.disabled = false;
     messageInput.focus();
-});
+})
 
 createRoomForm.addEventListener("submit", (event) => {
     event.preventDefault();
-    const roomCode = `room-${Math.random().toString(36).slice(2, 8)}`;
-    roomInput.value = roomCode;
-    roomForm.requestSubmit();
+
+    socket.emit("create-room");
 });
 
 messageForm.addEventListener("submit", (event) => {
@@ -46,7 +48,7 @@ messageForm.addEventListener("submit", (event) => {
         return;
     }
 
-    socket.emit("test-message", {roomCode: currentRoom,message: message});
+    socket.emit("test-message", message);
     
     messageInput.value = "";
 });
@@ -60,4 +62,24 @@ socket.on("test-message", (message) => {
         totalMessages += 1;
         messageCount.textContent = `${totalMessages} ${totalMessages === 1 ? "note" : "notes"}`;
         messages.scrollTop = messages.scrollHeight;
+});
+socket.on("room-created",(roomCode)=>{
+    
+
+    currentRoom = roomCode;
+
+    roomStatus.textContent =
+        `Connected to ${roomCode}`;
+
+    roomStatus.classList.add("is-active");
+
+    messageInput.disabled = false;
+    sendBtn.disabled = false;
+
+    messageInput.focus();
+
+});
+
+socket.on("room-error", (message) => {
+    alert(message);
 });
