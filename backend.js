@@ -6,11 +6,15 @@ const {Server}=require('socket.io');
 const io=new Server(server);
 app.use(express.static("public"));
 io.on("connection", (socket) => {
+    socket.on("join-room",(roomCode)=>{
+        socket.join(roomCode);
+        console.log(`${socket.id} joined room ${roomCode}`);
+    })
     console.log("Client connected:", socket.id);
 
-    socket.on("test-message", (message) => {
+    socket.on("test-message", ({roomCode, message}) => {
         console.log("Received:", message);
-        io.emit("test-message", message);
+        io.to(roomCode).emit("test-message", message);
     });
 
     socket.on("disconnect", () => {
