@@ -1,6 +1,7 @@
 const socket = io();
 let currentRoom = null;
 const roomForm = document.getElementById("roomForm");
+const createRoomForm = document.getElementById("createRoomForm");
 const messageForm = document.getElementById("messageForm");
 const messageInput = document.getElementById("messageInput");
 const roomInput = document.getElementById("roomInput");
@@ -27,6 +28,13 @@ roomForm.addEventListener("submit", (event) => {
     messageInput.disabled = false;
     sendBtn.disabled = false;
     messageInput.focus();
+});
+
+createRoomForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const roomCode = `room-${Math.random().toString(36).slice(2, 8)}`;
+    roomInput.value = roomCode;
+    roomForm.requestSubmit();
 });
 
 messageForm.addEventListener("submit", (event) => {

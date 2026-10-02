@@ -42,11 +42,22 @@
                     <p id="roomStatus" class="room-status" aria-live="polite">No room selected</p>
                 </form>
             </aside>
+            <aside class="create-panel">
+                <div>
+                    <p class="panel-label">02 / New room</p>
+                    <h2>Start fresh</h2>
+                    <p class="panel-copy">Make a private space for your next idea. We will create a code you can share.</p>
+                </div>
+                <form id="createRoomForm" class="create-form">
+                    <button id="createRoomBtn" type="submit" class="create-button">Create a room <span aria-hidden="true">&#10022;</span></button>
+                    <p class="create-hint">A one-time room code will be generated for you.</p>
+                </form>
+            </aside>
 
             <section class="chat-panel" aria-labelledby="chat-title">
                 <div class="chat-heading">
                     <div>
-                        <p class="panel-label">02 / Shared notes</p>
+                        <p class="panel-label">03 / Shared notes</p>
                         <h2 id="chat-title">Room messages</h2>
                     </div>
                     <span id="messageCount" class="message-count">0 notes</span>

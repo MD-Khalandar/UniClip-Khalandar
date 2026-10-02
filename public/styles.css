@@ -36,8 +36,9 @@ h1, h2, p { margin-top: 0; }
 h1 { margin-bottom: 20px; font-size: clamp(2.7rem, 6vw, 5.25rem); font-weight: 600; letter-spacing: -.055em; line-height: .98; }
 h1 em { color: var(--mint-deep); font-style: normal; }
 .intro-copy { max-width: 420px; margin: 0; color: var(--muted); font-size: 1rem; line-height: 1.6; }
-.workspace { display: grid; grid-template-columns: .78fr 1.22fr; min-height: 480px; border: 1px solid var(--line); background: var(--panel); box-shadow: 0 22px 60px rgba(24, 33, 31, .07); }
+.workspace { display: grid; grid-template-columns: .72fr .72fr 1.16fr; min-height: 480px; border: 1px solid var(--line); background: var(--panel); box-shadow: 0 22px 60px rgba(24, 33, 31, .07); }
 .room-panel { display: flex; flex-direction: column; justify-content: space-between; padding: 36px; background: #e7f1e8; border-right: 1px solid var(--line); }
+.create-panel { display: flex; flex-direction: column; justify-content: space-between; padding: 36px; background: #fff8f0; border-right: 1px solid var(--line); }
 h2 { margin-bottom: 12px; font-size: 1.45rem; letter-spacing: -.035em; }
 .panel-copy { max-width: 250px; color: var(--muted); font-size: .9rem; line-height: 1.55; }
 .room-form label { display: block; margin-bottom: 9px; color: var(--muted); font-size: .75rem; font-weight: 600; }
@@ -50,6 +51,10 @@ input::placeholder { color: #9aa39e; }
 .input-row button:hover span { transform: translateX(4px); }
 .room-status { min-height: 18px; margin: 13px 0 0; color: var(--muted); font-family: "DM Mono", monospace; font-size: .68rem; }
 .room-status.is-active { color: var(--mint-deep); }
+.create-button { width: 100%; border: 1px solid var(--ink); padding: 13px 14px; color: var(--ink); background: transparent; font-size: .82rem; font-weight: 600; text-align: left; transition: color .2s ease, background .2s ease; }
+.create-button span { float: right; color: var(--coral); font-size: 1rem; }
+.create-button:hover { color: white; background: var(--ink); }
+.create-hint { margin: 12px 0 0; color: var(--muted); font-family: "DM Mono", monospace; font-size: .62rem; line-height: 1.5; }
 .chat-panel { display: flex; flex-direction: column; min-width: 0; padding: 36px; }
 .chat-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .chat-heading h2 { margin-bottom: 0; }
@@ -78,6 +83,7 @@ footer span { padding: 0 5px; color: var(--coral); }
     h1 { font-size: clamp(2.6rem, 14vw, 4rem); }
     .workspace { display: block; }
     .room-panel { gap: 35px; border-right: 0; border-bottom: 1px solid var(--line); padding: 25px; }
+    .create-panel { gap: 35px; border-right: 0; border-bottom: 1px solid var(--line); padding: 25px; }
     .chat-panel { padding: 25px; }
     .messages { min-height: 220px; }
     footer { text-align: left; }
