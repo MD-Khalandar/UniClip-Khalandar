@@ -4,10 +4,16 @@ const http=require('http');
 const server=http.createServer(app);
 const {Server}=require('socket.io');
 const io=new Server(server);
-const rooms = new Set();
+const rooms = new Map();
 app.use(express.static("public"));
 io.on("connection", (socket) => {
     socket.on("join-room",(roomCode)=>{
+        const oldRoom = socket.data.roomCode;
+
+            if (oldRoom) {
+                socket.leave(oldRoom);
+            }
+
         if(rooms.has(roomCode)){
             socket.join(roomCode);
             socket.data.roomCode = roomCode;
@@ -36,11 +42,18 @@ io.on("connection", (socket) => {
     );
 });
     socket.on("create-room",()=>{
+        const oldRoom = socket.data.roomCode;
+        if (oldRoom) {
+            socket.leave(oldRoom);
+        }
         let roomCode;
         do{
             roomCode=generateRoomCode()
         }while(rooms.has(roomCode))
-        rooms.add(roomCode)
+        rooms.set(roomCode, {
+            roomCode,
+            roomHostId: socket.id
+        })
         socket.join(roomCode)
         socket.data.roomCode=roomCode
         socket.emit("room-created",roomCode)

@@ -73,6 +73,10 @@
                     <label class="sr-only" for="messageInput">Write a message</label>
                     <input id="messageInput" type="text" placeholder="Write a note..." autocomplete="off" maxlength="500" disabled>
                     <button id="sendBtn" type="submit" aria-label="Send message" disabled><span aria-hidden="true">&#8593;</span></button>
+                    <button id="syncClipboardBtn" type="button" aria-keyshortcuts="Alt+S" disabled>
+                        Sync Clipboard
+                    </button>
+                    <span id="clipboardStatus" class="clipboard-status" aria-live="polite"></span>
                 </form>
             </section>
         </section>
