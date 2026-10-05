@@ -84,4 +84,5 @@ Example history structure:
 }
 ```
 Deployed on render :  https://uniclip-khalandar-1.onrender.com
-deployed on AWS :UniClipKhalandar-env.eba-bmndvfsw.ap-southeast-2.elasticbeanstalk.com 
+
+deployed on AWS : UniClipKhalandar-env.eba-bmndvfsw.ap-southeast-2.elasticbeanstalk.com 
