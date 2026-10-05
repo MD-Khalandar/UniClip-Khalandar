@@ -12,9 +12,11 @@ const messageCount = document.getElementById("messageCount");
 const leaveRoomBtn = document.getElementById("leaveRoomBtn");
 let totalMessages = 0;
 const syncClipboardBtn = document.getElementById("syncClipboardBtn");
+const autoSyncClipboardBtn = document.getElementById("autoSyncClipboardBtn");
 const clipboardStatus = document.getElementById("clipboardStatus");
 let latestClipboard = "";
 let isRoomHost = false;
+let autoSyncClipboard = false;
 
 roomForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -92,7 +94,11 @@ socket.on("clipboard-pushed", (entry) => {
     latestClipboard = entry.text;
     renderHistoryEntry(entry);
     if (!isRoomHost) {
-        clipboardStatus.textContent = "Clipboard ready to sync";
+        if (autoSyncClipboard) {
+            syncClipboardToDevice(entry.text);
+        } else {
+            clipboardStatus.textContent = "Clipboard ready to sync";
+        }
     }
 });
 socket.on("room-created",(roomCode)=>{
@@ -120,11 +126,23 @@ syncClipboardBtn.addEventListener("click", async () => {
         return;
     }
 
-    if (!latestClipboard) {
-        clipboardStatus.textContent = "Nothing to sync yet";
+    socket.emit("clipboard-sync");
+});
+
+autoSyncClipboardBtn.addEventListener("click", () => {
+    if (!currentRoom || isRoomHost) {
         return;
-    }else{
+    }
+
+    autoSyncClipboard = !autoSyncClipboard;
+    autoSyncClipboardBtn.setAttribute("aria-pressed", String(autoSyncClipboard));
+    autoSyncClipboardBtn.textContent = autoSyncClipboard ? "Auto Sync On" : "Auto Sync";
+
+    if (autoSyncClipboard) {
+        clipboardStatus.textContent = "Auto-sync enabled";
         socket.emit("clipboard-sync");
+    } else {
+        clipboardStatus.textContent = "Auto-sync disabled";
     }
 });
 
@@ -143,14 +161,24 @@ messages.addEventListener("click", async (event) => {
 });
 
 socket.on("sync-clipboard", async (clipboardData) => {
+    await syncClipboardToDevice(clipboardData);
+});
+
+async function syncClipboardToDevice(clipboardData) {
+    if (typeof clipboardData !== "string") {
+        return;
+    }
+
     latestClipboard = clipboardData;
     try {
         await navigator.clipboard.writeText(latestClipboard);
-        clipboardStatus.textContent = "Clipboard synced";
+        clipboardStatus.textContent = autoSyncClipboard
+            ? "Clipboard synced automatically"
+            : "Clipboard synced";
     } catch {
         clipboardStatus.textContent = "Clipboard permission was denied";
     }
-});
+}
 
 document.addEventListener("keydown", (event) => {
     if (event.altKey && event.key.toLowerCase() === "s" && !syncClipboardBtn.disabled) {
@@ -162,13 +190,17 @@ document.addEventListener("keydown", (event) => {
 function activateRoom(roomCode, host) {
     currentRoom = roomCode;
     isRoomHost = host;
+    autoSyncClipboard = false;
     roomStatus.textContent = `Connected to ${roomCode}`;
     roomStatus.classList.add("is-active");
     messageInput.disabled = false;
     sendBtn.disabled = false;
     syncClipboardBtn.disabled = false;
+    autoSyncClipboardBtn.disabled = host;
     leaveRoomBtn.disabled = false;
     syncClipboardBtn.textContent = host ? "Push Clipboard" : "Sync Clipboard";
+    autoSyncClipboardBtn.textContent = "Auto Sync";
+    autoSyncClipboardBtn.setAttribute("aria-pressed", "false");
     clipboardStatus.textContent = host ? "Alt+S to push" : "Alt+S to sync";
     messageInput.focus();
 }
@@ -214,6 +246,7 @@ function updateMessageCount() {
 function resetRoomState() {
     currentRoom = null;
     isRoomHost = false;
+    autoSyncClipboard = false;
     totalMessages = 0;
     roomStatus.textContent = "No room selected";
     roomStatus.classList.remove("is-active");
@@ -221,8 +254,11 @@ function resetRoomState() {
     messageInput.disabled = true;
     sendBtn.disabled = true;
     syncClipboardBtn.disabled = true;
+    autoSyncClipboardBtn.disabled = true;
     leaveRoomBtn.disabled = true;
     syncClipboardBtn.textContent = "Sync Clipboard";
+    autoSyncClipboardBtn.textContent = "Auto Sync";
+    autoSyncClipboardBtn.setAttribute("aria-pressed", "false");
     clipboardStatus.textContent = "";
     messageCount.textContent = "0 notes";
     messages.innerHTML = `<div id="emptyState" class="empty-state">
