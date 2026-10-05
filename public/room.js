@@ -15,7 +15,7 @@ export function createRoomController({ socket, elements, onActivate, onReset }) 
             roomInput.focus();
             return;
         }
-        socket.emit("join-room", { roomCode, socketId: socket.id });
+        socket.emit("join-room", roomCode);
     });
 
     socket.on("connect", () => {
