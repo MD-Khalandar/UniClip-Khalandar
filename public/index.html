@@ -76,6 +76,9 @@
                     <label class="sr-only" for="messageInput">Write a message</label>
                     <input id="messageInput" type="text" placeholder="Write a note..." autocomplete="off" maxlength="500" disabled>
                     <button id="sendBtn" type="submit" aria-label="Send message" disabled><span aria-hidden="true">&#8593;</span></button>
+                </form>
+                <div class="clipboard-toolbar" aria-label="Clipboard controls">
+                    <span class="clipboard-label">Clipboard</span>
                     <button id="syncClipboardBtn" type="button" aria-keyshortcuts="Alt+S" disabled>
                         Sync Clipboard
                     </button>
@@ -83,7 +86,7 @@
                         Auto Sync
                     </button>
                     <span id="clipboardStatus" class="clipboard-status" aria-live="polite"></span>
-                </form>
+                </div>
             </section>
         </section>
         <footer>UniClip <span>·</span> small notes, shared instantly</footer>
