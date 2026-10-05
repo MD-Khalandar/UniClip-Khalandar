@@ -82,3 +82,6 @@ Example history structure:
     type: "clipboard",
     text: "https://github.com/example"
 }
+```
+Deployed on render :  https://uniclip-khalandar-1.onrender.com
+deployed on AWS :UniClipKhalandar-env.eba-bmndvfsw.ap-southeast-2.elasticbeanstalk.com 
