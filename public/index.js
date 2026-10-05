@@ -17,6 +17,8 @@ const clipboardStatus = document.getElementById("clipboardStatus");
 let latestClipboard = "";
 let isRoomHost = false;
 let autoSyncClipboard = false;
+let clipboardPollTimer = null;
+let clipboardPollInFlight = false;
 
 roomForm.addEventListener("submit", (event) => {
     event.preventDefault();
@@ -130,21 +132,65 @@ syncClipboardBtn.addEventListener("click", async () => {
 });
 
 autoSyncClipboardBtn.addEventListener("click", () => {
-    if (!currentRoom || isRoomHost) {
+    if (!currentRoom) {
         return;
     }
 
     autoSyncClipboard = !autoSyncClipboard;
     autoSyncClipboardBtn.setAttribute("aria-pressed", String(autoSyncClipboard));
-    autoSyncClipboardBtn.textContent = autoSyncClipboard ? "Auto Sync On" : "Auto Sync";
+    autoSyncClipboardBtn.textContent = autoSyncClipboard
+        ? (isRoomHost ? "Auto Push On" : "Auto Sync On")
+        : (isRoomHost ? "Auto Push" : "Auto Sync");
 
     if (autoSyncClipboard) {
-        clipboardStatus.textContent = "Auto-sync enabled";
-        socket.emit("clipboard-sync");
+        clipboardStatus.textContent = isRoomHost
+            ? "Watching clipboard..."
+            : "Auto-sync enabled";
+        if (isRoomHost) {
+            startClipboardPolling();
+        } else {
+            socket.emit("clipboard-sync");
+        }
     } else {
-        clipboardStatus.textContent = "Auto-sync disabled";
+        stopClipboardPolling();
+        clipboardStatus.textContent = isRoomHost
+            ? "Auto-push disabled"
+            : "Auto-sync disabled";
     }
 });
+
+function startClipboardPolling() {
+    stopClipboardPolling();
+    pollClipboardAndPush();
+    clipboardPollTimer = setInterval(pollClipboardAndPush, 1000);
+}
+
+function stopClipboardPolling() {
+    if (clipboardPollTimer !== null) {
+        clearInterval(clipboardPollTimer);
+        clipboardPollTimer = null;
+    }
+}
+
+async function pollClipboardAndPush() {
+    if (!currentRoom || !isRoomHost || !autoSyncClipboard || clipboardPollInFlight) {
+        return;
+    }
+
+    clipboardPollInFlight = true;
+    try {
+        const clipboardData = await navigator.clipboard.readText();
+        if (clipboardData !== latestClipboard) {
+            latestClipboard = clipboardData;
+            socket.emit("clipboard-push", clipboardData);
+            clipboardStatus.textContent = "Clipboard pushed automatically";
+        }
+    } catch {
+        clipboardStatus.textContent = "Clipboard permission was denied";
+    } finally {
+        clipboardPollInFlight = false;
+    }
+}
 
 messages.addEventListener("click", async (event) => {
     const syncButton = event.target.closest("[data-history-index]");
@@ -188,6 +234,7 @@ document.addEventListener("keydown", (event) => {
 });
 
 function activateRoom(roomCode, host) {
+    stopClipboardPolling();
     currentRoom = roomCode;
     isRoomHost = host;
     autoSyncClipboard = false;
@@ -196,10 +243,10 @@ function activateRoom(roomCode, host) {
     messageInput.disabled = false;
     sendBtn.disabled = false;
     syncClipboardBtn.disabled = false;
-    autoSyncClipboardBtn.disabled = host;
+    autoSyncClipboardBtn.disabled = false;
     leaveRoomBtn.disabled = false;
     syncClipboardBtn.textContent = host ? "Push Clipboard" : "Sync Clipboard";
-    autoSyncClipboardBtn.textContent = "Auto Sync";
+    autoSyncClipboardBtn.textContent = host ? "Auto Push" : "Auto Sync";
     autoSyncClipboardBtn.setAttribute("aria-pressed", "false");
     clipboardStatus.textContent = host ? "Alt+S to push" : "Alt+S to sync";
     messageInput.focus();
@@ -244,6 +291,7 @@ function updateMessageCount() {
 }
 
 function resetRoomState() {
+    stopClipboardPolling();
     currentRoom = null;
     isRoomHost = false;
     autoSyncClipboard = false;
