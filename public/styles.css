@@ -51,6 +51,12 @@ input::placeholder { color: #9aa39e; }
 .input-row button:hover span { transform: translateX(4px); }
 .room-status { min-height: 18px; margin: 13px 0 0; color: var(--muted); font-family: "DM Mono", monospace; font-size: .68rem; }
 .room-status.is-active { color: var(--mint-deep); }
+.room-share { margin-top: 16px; }
+.room-share label { margin-bottom: 7px; }
+.room-link-row { display: flex; border-bottom: 1px solid var(--line); }
+.room-link-row input { flex: 1; min-width: 0; padding: 7px 0; color: var(--muted); font-family: "DM Mono", monospace; font-size: .62rem; text-overflow: ellipsis; }
+.room-link-row button { border: 0; padding: 0 0 0 10px; color: var(--mint-deep); background: transparent; font-family: "DM Mono", monospace; font-size: .62rem; font-weight: 500; }
+.room-link-row button:hover { color: var(--ink); }
 .room-form .leave-button { margin-top: 14px; }
 .create-button { width: 100%; border: 1px solid var(--ink); padding: 13px 14px; color: var(--ink); background: transparent; font-size: .82rem; font-weight: 600; text-align: left; transition: color .2s ease, background .2s ease; }
 .create-button span { float: right; color: var(--coral); font-size: 1rem; }

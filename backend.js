@@ -8,7 +8,7 @@ const io=new Server(server);
 const rooms = new Map();
 app.use(express.static("public"));
 io.on("connection", (socket) => {
-    socket.on("join-room",({roomCode,socketId})=>{
+    socket.on("join-room",(roomCode)=>{
         let isHost = rooms.get(roomCode)?.roomHostId === socket.id;
         const oldRoom = socket.data.roomCode;
 

@@ -1,317 +1,98 @@
+import { createClipboardController } from "./clipboard.js";
+import { createMessageView } from "./message-ui.js";
+import { createRoomController } from "./room.js";
+
 const socket = io();
+const elements = {
+    roomForm: document.getElementById("roomForm"),
+    createRoomForm: document.getElementById("createRoomForm"),
+    messageForm: document.getElementById("messageForm"),
+    messageInput: document.getElementById("messageInput"),
+    roomInput: document.getElementById("roomInput"),
+    roomShare: document.getElementById("roomShare"),
+    roomLinkInput: document.getElementById("roomLinkInput"),
+    copyRoomLinkBtn: document.getElementById("copyRoomLinkBtn"),
+    sendBtn: document.getElementById("sendBtn"),
+    messages: document.getElementById("messages"),
+    roomStatus: document.getElementById("roomStatus"),
+    messageCount: document.getElementById("messageCount"),
+    leaveRoomBtn: document.getElementById("leaveRoomBtn"),
+    syncClipboardBtn: document.getElementById("syncClipboardBtn"),
+    autoSyncClipboardBtn: document.getElementById("autoSyncClipboardBtn"),
+    clipboardStatus: document.getElementById("clipboardStatus")
+};
+
 let currentRoom = null;
-const roomForm = document.getElementById("roomForm");
-const createRoomForm = document.getElementById("createRoomForm");
-const messageForm = document.getElementById("messageForm");
-const messageInput = document.getElementById("messageInput");
-const roomInput = document.getElementById("roomInput");
-const sendBtn = document.getElementById("sendBtn");
-const messages = document.getElementById("messages");
-const roomStatus = document.getElementById("roomStatus");
-const messageCount = document.getElementById("messageCount");
-const leaveRoomBtn = document.getElementById("leaveRoomBtn");
-let totalMessages = 0;
-const syncClipboardBtn = document.getElementById("syncClipboardBtn");
-const autoSyncClipboardBtn = document.getElementById("autoSyncClipboardBtn");
-const clipboardStatus = document.getElementById("clipboardStatus");
-let latestClipboard = "";
 let isRoomHost = false;
-let autoSyncClipboard = false;
-let clipboardPollTimer = null;
-let clipboardPollInFlight = false;
+const messageView = createMessageView(elements.messages, elements.messageCount);
+const clipboard = createClipboardController({
+    socket,
+    elements,
+    getRoom: () => currentRoom,
+    onClipboardEntry: messageView.renderHistoryEntry
+});
+createRoomController({
+    socket,
+    elements,
+    onActivate: activateRoom,
+    onReset: resetRoomState
+});
 
-roomForm.addEventListener("submit", (event) => {
+elements.messageForm.addEventListener("submit", (event) => {
     event.preventDefault();
-     const roomCode = roomInput.value.trim().toUpperCase();
-
-    if (!roomCode) {
-        roomInput.focus();
-        return;
-    }
-
-    socket.emit("join-room", ({roomCode,socketId: socket.id}));
-    
-});
-socket.on("room-joined",({roomCode,isHost})=>{
-    activateRoom(roomCode, isHost);
-
-})
-
-socket.on("room-history", (history) => {
-    if (!currentRoom) {
-        return;
-    }
-
-    messages.innerHTML = "";
-    totalMessages = 0;
-    history.forEach((entry) => {
-        renderHistoryEntry(entry);
-        if (entry.type === "message") {
-            totalMessages += 1;
-        }
-    });
-    updateMessageCount();
-});
-
-createRoomForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-
-    socket.emit("create-room");
-});
-
-leaveRoomBtn.addEventListener("click", () => {
-    if (!currentRoom) {
-        return;
-    }
-
-    socket.emit("leave-room");
-    resetRoomState();
-});
-
-messageForm.addEventListener("submit", (event) => {
-    event.preventDefault();
-
-    const message = messageInput.value.trim();
-
+    const message = elements.messageInput.value.trim();
     if (!message || !currentRoom) {
         return;
     }
-
     socket.emit("test-message", message);
-    
-    messageInput.value = "";
+    elements.messageInput.value = "";
+});
+
+elements.messages.addEventListener("click", (event) => {
+    const syncButton = event.target.closest("[data-history-index]");
+    if (!syncButton) {
+        return;
+    }
+    const historyIndex = Number(syncButton.dataset.historyIndex);
+    if (Number.isInteger(historyIndex)) {
+        socket.emit("clipboard-sync", { historyIndex });
+    }
+});
+
+socket.on("room-history", (history) => {
+    if (currentRoom) {
+        messageView.renderHistory(history);
+    }
 });
 
 socket.on("test-message", (message) => {
-    if (typeof message !== "string") {
-        return;
+    if (typeof message === "string") {
+        messageView.addMessage(message);
     }
-
-    renderHistoryEntry({ type: "message", text: message });
-    totalMessages += 1;
-    updateMessageCount();
-});
-
-socket.on("clipboard-pushed", (entry) => {
-    latestClipboard = entry.text;
-    renderHistoryEntry(entry);
-    if (!isRoomHost) {
-        if (autoSyncClipboard) {
-            syncClipboardToDevice(entry.text);
-        } else {
-            clipboardStatus.textContent = "Clipboard ready to sync";
-        }
-    }
-});
-socket.on("room-created",(roomCode)=>{
-    activateRoom(roomCode, true);
-    roomInput.value=roomCode;
 });
 
 socket.on("room-error", (message) => {
     alert(message);
 });
 
-syncClipboardBtn.addEventListener("click", async () => {
-    if (!currentRoom) {
-        return;
-    }
-
-    if (isRoomHost) {
-        try {
-            latestClipboard = await navigator.clipboard.readText();
-            socket.emit("clipboard-push", latestClipboard);
-            clipboardStatus.textContent = "Clipboard pushed to the room";
-        } catch {
-            clipboardStatus.textContent = "Clipboard permission was denied";
-        }
-        return;
-    }
-
-    socket.emit("clipboard-sync");
-});
-
-autoSyncClipboardBtn.addEventListener("click", () => {
-    if (!currentRoom) {
-        return;
-    }
-
-    autoSyncClipboard = !autoSyncClipboard;
-    autoSyncClipboardBtn.setAttribute("aria-pressed", String(autoSyncClipboard));
-    autoSyncClipboardBtn.textContent = autoSyncClipboard
-        ? (isRoomHost ? "Auto Push On" : "Auto Sync On")
-        : (isRoomHost ? "Auto Push" : "Auto Sync");
-
-    if (autoSyncClipboard) {
-        clipboardStatus.textContent = isRoomHost
-            ? "Watching clipboard..."
-            : "Auto-sync enabled";
-        if (isRoomHost) {
-            startClipboardPolling();
-        } else {
-            socket.emit("clipboard-sync");
-        }
-    } else {
-        stopClipboardPolling();
-        clipboardStatus.textContent = isRoomHost
-            ? "Auto-push disabled"
-            : "Auto-sync disabled";
-    }
-});
-
-function startClipboardPolling() {
-    stopClipboardPolling();
-    pollClipboardAndPush();
-    clipboardPollTimer = setInterval(pollClipboardAndPush, 1000);
-}
-
-function stopClipboardPolling() {
-    if (clipboardPollTimer !== null) {
-        clearInterval(clipboardPollTimer);
-        clipboardPollTimer = null;
-    }
-}
-
-async function pollClipboardAndPush() {
-    if (!currentRoom || !isRoomHost || !autoSyncClipboard || clipboardPollInFlight) {
-        return;
-    }
-
-    clipboardPollInFlight = true;
-    try {
-        const clipboardData = await navigator.clipboard.readText();
-        if (clipboardData !== latestClipboard) {
-            latestClipboard = clipboardData;
-            socket.emit("clipboard-push", clipboardData);
-            clipboardStatus.textContent = "Clipboard pushed automatically";
-        }
-    } catch {
-        clipboardStatus.textContent = "Clipboard permission was denied";
-    } finally {
-        clipboardPollInFlight = false;
-    }
-}
-
-messages.addEventListener("click", async (event) => {
-    const syncButton = event.target.closest("[data-history-index]");
-    if (!syncButton) {
-        return;
-    }
-
-    const historyIndex = Number(syncButton.dataset.historyIndex);
-    if (!Number.isInteger(historyIndex)) {
-        return;
-    }
-
-    socket.emit("clipboard-sync", { historyIndex });
-});
-
-socket.on("sync-clipboard", async (clipboardData) => {
-    await syncClipboardToDevice(clipboardData);
-});
-
-async function syncClipboardToDevice(clipboardData) {
-    if (typeof clipboardData !== "string") {
-        return;
-    }
-
-    latestClipboard = clipboardData;
-    try {
-        await navigator.clipboard.writeText(latestClipboard);
-        clipboardStatus.textContent = autoSyncClipboard
-            ? "Clipboard synced automatically"
-            : "Clipboard synced";
-    } catch {
-        clipboardStatus.textContent = "Clipboard permission was denied";
-    }
-}
-
-document.addEventListener("keydown", (event) => {
-    if (event.altKey && event.key.toLowerCase() === "s" && !syncClipboardBtn.disabled) {
-        event.preventDefault();
-        syncClipboardBtn.click();
-    }
-});
-
 function activateRoom(roomCode, host) {
-    stopClipboardPolling();
     currentRoom = roomCode;
     isRoomHost = host;
-    autoSyncClipboard = false;
-    roomStatus.textContent = `Connected to ${roomCode}`;
-    roomStatus.classList.add("is-active");
-    messageInput.disabled = false;
-    sendBtn.disabled = false;
-    syncClipboardBtn.disabled = false;
-    autoSyncClipboardBtn.disabled = false;
-    leaveRoomBtn.disabled = false;
-    syncClipboardBtn.textContent = host ? "Push Clipboard" : "Sync Clipboard";
-    autoSyncClipboardBtn.textContent = host ? "Auto Push" : "Auto Sync";
-    autoSyncClipboardBtn.setAttribute("aria-pressed", "false");
-    clipboardStatus.textContent = host ? "Alt+S to push" : "Alt+S to sync";
-    messageInput.focus();
-}
-
-function renderHistoryEntry(entry) {
-    document.getElementById("emptyState")?.remove();
-
-    if (entry.type === "clipboard") {
-        const line = document.createElement("div");
-        line.className = "message clipboard-entry";
-
-        const label = document.createElement("span");
-        label.className = "clipboard-entry-label";
-        label.textContent = "Clipboard push";
-
-        const text = document.createElement("span");
-        text.className = "clipboard-entry-text";
-        text.textContent = entry.text;
-
-        const syncButton = document.createElement("button");
-        syncButton.type = "button";
-        syncButton.className = "history-sync-button";
-        syncButton.textContent = "Sync";
-        syncButton.dataset.historyIndex = String(entry.historyIndex);
-        syncButton.title = "Copy this clipboard push to your clipboard";
-
-        line.append(label, text, syncButton);
-        messages.appendChild(line);
-    } else if (entry.type === "message") {
-        const line = document.createElement("div");
-        line.className = "message";
-        line.textContent = entry.text;
-        messages.appendChild(line);
-    }
-
-    messages.scrollTop = messages.scrollHeight;
-}
-
-function updateMessageCount() {
-    messageCount.textContent = `${totalMessages} ${totalMessages === 1 ? "note" : "notes"}`;
+    elements.roomInput.value = roomCode;
+    elements.messageInput.disabled = false;
+    elements.sendBtn.disabled = false;
+    elements.leaveRoomBtn.disabled = false;
+    elements.messageInput.focus();
+    clipboard.activate(host);
 }
 
 function resetRoomState() {
-    stopClipboardPolling();
     currentRoom = null;
     isRoomHost = false;
-    autoSyncClipboard = false;
-    totalMessages = 0;
-    roomStatus.textContent = "No room selected";
-    roomStatus.classList.remove("is-active");
-    messageInput.value = "";
-    messageInput.disabled = true;
-    sendBtn.disabled = true;
-    syncClipboardBtn.disabled = true;
-    autoSyncClipboardBtn.disabled = true;
-    leaveRoomBtn.disabled = true;
-    syncClipboardBtn.textContent = "Sync Clipboard";
-    autoSyncClipboardBtn.textContent = "Auto Sync";
-    autoSyncClipboardBtn.setAttribute("aria-pressed", "false");
-    clipboardStatus.textContent = "";
-    messageCount.textContent = "0 notes";
-    messages.innerHTML = `<div id="emptyState" class="empty-state">
-        <span class="empty-icon" aria-hidden="true">+</span>
-        <p>Your shared space is ready.</p>
-        <span>Join a room to start sending notes.</span>
-    </div>`;
+    elements.messageInput.value = "";
+    elements.messageInput.disabled = true;
+    elements.sendBtn.disabled = true;
+    elements.leaveRoomBtn.disabled = true;
+    messageView.reset();
+    clipboard.reset();
 }

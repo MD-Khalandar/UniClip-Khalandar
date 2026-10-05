@@ -40,6 +40,13 @@
                         <button id="joinBtn" type="submit" aria-label="Join room">Join <span aria-hidden="true">&#8594;</span></button>
                     </div>
                     <p id="roomStatus" class="room-status" aria-live="polite">No room selected</p>
+                    <div id="roomShare" class="room-share" hidden>
+                        <label for="roomLinkInput">Share room link</label>
+                        <div class="room-link-row">
+                            <input id="roomLinkInput" type="text" readonly>
+                            <button id="copyRoomLinkBtn" type="button">Copy</button>
+                        </div>
+                    </div>
                     <button id="leaveRoomBtn" class="leave-button" type="button" disabled>Leave room</button>
                 </form>
             </aside>
